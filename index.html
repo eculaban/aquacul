@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0A6EBD">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AquaCul">
+<title>AquaCul – Water Refilling Station</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #0A6EBD;
+    --blue-dark: #084F8A;
+    --blue-light: #3A9FDD;
+    --cyan-bg: #E8F7FF;
+    --green: #2ECC71;
+    --green-dark: #27AE60;
+    --dark: #1A1A2E;
+    --gray: #6B7280;
+    --light-gray: #F3F4F6;
+    --white: #FFFFFF;
+    --danger: #EF4444;
+    --orange: #F59E0B;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(10,110,189,0.13);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--cyan-bg);
+    color: var(--dark);
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display:none; flex-direction:column; min-height:100vh; }
+  .screen.active { display:flex; }
+
+  /* ── SPLASH ── */
+  #splash {
+    background: linear-gradient(160deg, #0A6EBD 0%, #084F8A 60%, #042D55 100%);
+    align-items: center; justify-content: center; gap: 18px;
+    animation: fadeIn .5s ease;
+  }
+  .splash-bubble {
+    width: 130px; height: 130px; border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    display: flex; align-items:center; justify-content:center;
+    box-shadow: 0 0 0 18px rgba(255,255,255,0.06), 0 0 0 36px rgba(255,255,255,0.03);
+    animation: pulse 2.5s infinite;
+  }
+  .splash-bubble svg { width:68px; height:68px; }
+  #splash h1 { font-family:'Syne',sans-serif; font-size:2.6rem; color:#fff; letter-spacing:-1px; }
+  #splash p { color:rgba(255,255,255,0.7); font-size:.95rem; }
+  .splash-btn {
+    margin-top: 28px; padding: 15px 48px; border-radius: 50px;
+    background: #fff; color: var(--blue); font-family:'Nunito',sans-serif;
+    font-size: 1.05rem; font-weight: 800; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .splash-btn:active { transform: scale(.97); }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--blue);
+    padding: 16px 20px 14px;
+    display: flex; align-items:center; justify-content:space-between;
+    position: sticky; top:0; z-index:100;
+    box-shadow: 0 2px 12px rgba(10,110,189,0.2);
+  }
+  .topbar-left { display:flex; align-items:center; gap:10px; }
+  .topbar h2 { font-family:'Syne',sans-serif; color:#fff; font-size:1.25rem; }
+  .topbar-sub { color:rgba(255,255,255,0.7); font-size:.78rem; margin-top:1px; }
+  .topbar-icon { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; cursor:pointer; border:none; }
+  .topbar-icon svg { width:18px; height:18px; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width: 100%; max-width:430px;
+    background: #fff;
+    display: flex; border-top: 1px solid #E5E7EB;
+    z-index: 200; padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-item {
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    padding: 10px 0 8px; cursor:pointer; border:none; background:none;
+    gap: 3px; color: var(--gray); font-size:.68rem; font-family:'Nunito',sans-serif; font-weight:700;
+    transition: color .2s;
+  }
+  .nav-item svg { width:22px; height:22px; }
+  .nav-item.active { color: var(--blue); }
+  .nav-item.active svg path, .nav-item.active svg circle, .nav-item.active svg rect { stroke: var(--blue); }
+
+  /* ── HOME ── */
+  .home-hero {
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    padding: 24px 20px 32px; position:relative; overflow:hidden;
+  }
+  .hero-greeting { color: rgba(255,255,255,0.8); font-size:.9rem; }
+  .hero-name { color:#fff; font-size:1.5rem; font-weight:800; margin-top:2px; }
+  .hero-card {
+    background: rgba(255,255,255,0.15); border-radius:14px;
+    padding: 14px 18px; margin-top:18px; backdrop-filter:blur(8px);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .hero-card-label { color:rgba(255,255,255,0.75); font-size:.78rem; }
+  .hero-card-val { color:#fff; font-size:1.4rem; font-weight:800; }
+  .hero-bubble {
+    position:absolute; right:-20px; top:-30px; width:160px; height:160px;
+    border-radius:50%; background:rgba(255,255,255,0.07);
+  }
+  .hero-bubble2 {
+    position:absolute; right:40px; bottom:-50px; width:100px; height:100px;
+    border-radius:50%; background:rgba(255,255,255,0.05);
+  }
+
+  .section { padding: 20px 20px 0; }
+  .section-title { font-size:.8rem; font-weight:800; color:var(--gray); text-transform:uppercase; letter-spacing:.07em; margin-bottom:12px; }
+
+  /* Products */
+  .products-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .product-card {
+    background:#fff; border-radius:var(--radius); padding:16px 14px;
+    box-shadow: var(--shadow); cursor:pointer; border:2px solid transparent;
+    transition: border-color .2s, transform .15s;
+    position:relative;
+  }
+  .product-card:active { transform:scale(.97); }
+  .product-card.selected { border-color: var(--blue); }
+  .product-icon { font-size:2rem; margin-bottom:8px; }
+  .product-name { font-weight:800; font-size:.95rem; color:var(--dark); }
+  .product-desc { font-size:.75rem; color:var(--gray); margin-top:2px; }
+  .product-price { font-size:1.1rem; font-weight:800; color:var(--blue); margin-top:8px; }
+  .product-badge {
+    position:absolute; top:10px; right:10px; background:var(--green);
+    color:#fff; font-size:.6rem; font-weight:800; padding:2px 7px; border-radius:20px;
+  }
+
+  /* Quick order bar */
+  .quick-order {
+    background:#fff; border-radius:var(--radius); padding:18px;
+    box-shadow:var(--shadow); margin:16px 20px 0;
+  }
+  .qty-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .qty-label { font-weight:700; font-size:.95rem; }
+  .qty-controls { display:flex; align-items:center; gap:14px; }
+  .qty-btn {
+    width:34px; height:34px; border-radius:50%; border:none;
+    background:var(--cyan-bg); color:var(--blue); font-size:1.3rem; font-weight:800;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition: background .15s;
+  }
+  .qty-btn:active { background: var(--blue); color:#fff; }
+  .qty-val { font-size:1.3rem; font-weight:800; min-width:28px; text-align:center; }
+
+  .type-row { display:flex; gap:8px; margin-bottom:14px; }
+  .type-chip {
+    flex:1; padding:9px 6px; border-radius:10px; border:2px solid var(--light-gray);
+    background:var(--light-gray); font-family:'Nunito',sans-serif; font-size:.8rem;
+    font-weight:700; color:var(--gray); cursor:pointer; transition:.15s;
+    text-align:center;
+  }
+  .type-chip.active { background:var(--cyan-bg); border-color:var(--blue); color:var(--blue); }
+
+  .order-total-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .total-label { color:var(--gray); font-size:.88rem; }
+  .total-val { font-size:1.3rem; font-weight:800; color:var(--dark); }
+
+  /* Buttons */
+  .btn-primary {
+    width:100%; padding:15px; border-radius:50px; border:none;
+    background: linear-gradient(90deg, var(--blue) 0%, var(--blue-light) 100%);
+    color:#fff; font-family:'Nunito',sans-serif; font-size:1rem; font-weight:800;
+    cursor:pointer; box-shadow:0 4px 16px rgba(10,110,189,0.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-primary:active { transform:scale(.98); }
+  .btn-secondary {
+    width:100%; padding:14px; border-radius:50px; border:2px solid var(--blue);
+    background:transparent; color:var(--blue); font-family:'Nunito',sans-serif;
+    font-size:1rem; font-weight:800; cursor:pointer; transition:.15s;
+  }
+  .btn-secondary:active { background:var(--cyan-bg); }
+
+  /* ── ORDERS ── */
+  .orders-list { padding: 16px 20px 100px; display:flex; flex-direction:column; gap:12px; }
+  .order-card {
+    background:#fff; border-radius:var(--radius); padding:16px 18px;
+    box-shadow:var(--shadow); cursor:pointer; transition:transform .15s;
+  }
+  .order-card:active { transform:scale(.99); }
+  .order-top { display:flex; justify-content:space-between; align-items:flex-start; }
+  .order-id { font-size:.75rem; color:var(--gray); font-weight:700; }
+  .status-badge {
+    padding:4px 10px; border-radius:20px; font-size:.7rem; font-weight:800;
+  }
+  .status-pending { background:#FEF3C7; color:#D97706; }
+  .status-confirmed { background:#DBEAFE; color:#1D4ED8; }
+  .status-delivery { background:#EDE9FE; color:#7C3AED; }
+  .status-delivered { background:#D1FAE5; color:#059669; }
+  .status-cancelled { background:#FEE2E2; color:#DC2626; }
+  .order-name { font-weight:800; font-size:1rem; margin-top:6px; }
+  .order-meta { color:var(--gray); font-size:.8rem; margin-top:3px; }
+  .order-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:12px; border-top:1px solid var(--light-gray); padding-top:10px; }
+  .order-price { font-weight:800; color:var(--blue); font-size:1.05rem; }
+  .order-time { color:var(--gray); font-size:.75rem; }
+
+  /* Empty state */
+  .empty-state { text-align:center; padding:60px 30px; }
+  .empty-state .emoji { font-size:3.5rem; }
+  .empty-state h3 { font-size:1.1rem; font-weight:800; margin:12px 0 6px; }
+  .empty-state p { color:var(--gray); font-size:.88rem; }
+
+  /* ── DASHBOARD ── */
+  .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px 20px 0; }
+  .stat-card {
+    background:#fff; border-radius:var(--radius); padding:16px;
+    box-shadow:var(--shadow);
+  }
+  .stat-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; margin-bottom:10px; }
+  .stat-val { font-size:1.6rem; font-weight:900; color:var(--dark); }
+  .stat-label { font-size:.72rem; color:var(--gray); font-weight:700; margin-top:2px; }
+
+  .dash-orders { padding:16px 20px 100px; }
+  .dash-order-item {
+    background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:10px;
+    box-shadow:var(--shadow); display:flex; align-items:center; gap:14px;
+  }
+  .dash-order-num { width:38px; height:38px; border-radius:10px; background:var(--cyan-bg); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--blue); font-size:.85rem; flex-shrink:0; }
+  .dash-order-info { flex:1; }
+  .dash-order-name { font-weight:800; font-size:.92rem; }
+  .dash-order-sub { color:var(--gray); font-size:.75rem; margin-top:2px; }
+  .dash-status-select {
+    padding:6px 10px; border-radius:8px; border:1.5px solid var(--light-gray);
+    font-family:'Nunito',sans-serif; font-size:.75rem; font-weight:700;
+    color:var(--dark); background:#fff; cursor:pointer;
+  }
+
+  /* ── PROFILE ── */
+  .profile-hero {
+    background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+    padding:30px 20px 40px; text-align:center;
+  }
+  .avatar {
+    width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.2);
+    margin:0 auto 12px; display:flex; align-items:center; justify-content:center;
+    font-size:2.2rem; border:3px solid rgba(255,255,255,0.4);
+  }
+  .profile-name { color:#fff; font-size:1.3rem; font-weight:800; }
+  .profile-phone { color:rgba(255,255,255,0.7); font-size:.85rem; margin-top:3px; }
+  .profile-body { padding:0 20px 100px; margin-top:-16px; }
+  .profile-card { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  .profile-item {
+    display:flex; align-items:center; gap:14px; padding:15px 18px;
+    border-bottom:1px solid var(--light-gray); cursor:pointer;
+  }
+  .profile-item:last-child { border-bottom:none; }
+  .profile-item-icon { width:36px; height:36px; border-radius:10px; background:var(--cyan-bg); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+  .profile-item-label { font-weight:700; font-size:.92rem; flex:1; }
+  .profile-item-arrow { color:var(--gray); font-size:1.1rem; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    z-index:500; align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.open { display:flex; animation:fadeIn .2s; }
+  .modal {
+    background:#fff; border-radius:24px 24px 0 0; padding:24px 20px 40px;
+    width:100%; max-width:430px; animation:slideUp .25s ease;
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal-handle { width:40px; height:4px; background:#E5E7EB; border-radius:4px; margin:0 auto 20px; }
+  .modal-title { font-size:1.2rem; font-weight:800; margin-bottom:18px; }
+
+  /* Form */
+  .form-group { margin-bottom:14px; }
+  .form-label { font-size:.82rem; font-weight:700; color:var(--gray); margin-bottom:6px; display:block; }
+  .form-input {
+    width:100%; padding:13px 16px; border-radius:12px; border:2px solid var(--light-gray);
+    font-family:'Nunito',sans-serif; font-size:.95rem; color:var(--dark);
+    transition:border-color .2s; outline:none;
+  }
+  .form-input:focus { border-color:var(--blue); }
+  .payment-options { display:flex; gap:8px; }
+  .payment-chip {
+    flex:1; padding:11px 6px; border-radius:10px; border:2px solid var(--light-gray);
+    background:var(--light-gray); font-family:'Nunito',sans-serif; font-size:.8rem;
+    font-weight:700; color:var(--gray); cursor:pointer; text-align:center; transition:.15s;
+  }
+  .payment-chip.active { background:var(--cyan-bg); border-color:var(--blue); color:var(--blue); }
+
+  /* Toast */
+  .toast {
+    position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px);
+    background:var(--dark); color:#fff; padding:12px 22px; border-radius:50px;
+    font-size:.88rem; font-weight:700; z-index:1000; transition:transform .3s ease;
+    white-space:nowrap;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* ORDER DETAIL */
+  .order-detail-modal { padding-bottom:10px; }
+  .order-track { display:flex; flex-direction:column; gap:0; margin:16px 0; }
+  .track-step { display:flex; gap:14px; align-items:flex-start; }
+  .track-dot-col { display:flex; flex-direction:column; align-items:center; }
+  .track-dot { width:20px; height:20px; border-radius:50%; border:2.5px solid var(--light-gray); background:#fff; flex-shrink:0; }
+  .track-dot.done { background:var(--green); border-color:var(--green); }
+  .track-dot.active { background:var(--blue); border-color:var(--blue); animation:pulse 1.5s infinite; }
+  .track-line { width:2px; height:28px; background:var(--light-gray); }
+  .track-line.done { background:var(--green); }
+  .track-info { padding-bottom:24px; }
+  .track-label { font-weight:700; font-size:.9rem; }
+  .track-sub { font-size:.75rem; color:var(--gray); margin-top:2px; }
+
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideUp { from{transform:translateY(60px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(10,110,189,0.4)} 50%{box-shadow:0 0 0 8px rgba(10,110,189,0)} }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="screen active" id="splash">
+  <div class="splash-bubble">
+    <svg viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M34 8 C34 8 12 28 12 42 C12 54 22 62 34 62 C46 62 56 54 56 42 C56 28 34 8 34 8Z" fill="rgba(255,255,255,0.9)"/>
+      <path d="M22 46 C22 46 26 52 34 52 C42 52 46 46 46 46" stroke="rgba(10,110,189,0.5)" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h1>AquaCul</h1>
+  <p>Brgy. Caridad Water Refilling Station</p>
+  <button class="splash-btn" onclick="goHome()">Get Started 💧</button>
+</div>
+
+<!-- CUSTOMER HOME -->
+<div class="screen" id="home">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="topbar-sub">Welcome back 👋</div>
+        <h2>AquaCul</h2>
+      </div>
+    </div>
+    <button class="topbar-icon" onclick="showToast('🔔 No new notifications')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="home-hero">
+    <div class="hero-bubble"></div><div class="hero-bubble2"></div>
+    <div class="hero-greeting">Good day! 💧</div>
+    <div class="hero-name">Order fresh water</div>
+    <div class="hero-card">
+      <div><div class="hero-card-label">Today's Orders</div><div class="hero-card-val" id="todayCount">0</div></div>
+      <div><div class="hero-card-label">Total Spent</div><div class="hero-card-val" id="totalSpent">₱0</div></div>
+      <div><div class="hero-card-label">Status</div><div class="hero-card-val" style="font-size:.9rem;color:#6EE7B7">🟢 Open</div></div>
+    </div>
+  </div>
+
+  <div class="section" style="margin-top:20px;">
+    <div class="section-title">Choose Container</div>
+    <div class="products-grid" id="productGrid">
+      <div class="product-card selected" onclick="selectProduct(this,0)">
+        <div class="product-badge">BEST</div>
+        <div class="product-icon">🫙</div>
+        <div class="product-name">Round 5-gal</div>
+        <div class="product-desc">Standard round container</div>
+        <div class="product-price">₱25</div>
+      </div>
+      <div class="product-card" onclick="selectProduct(this,1)">
+        <div class="product-icon">🧴</div>
+        <div class="product-name">Slim 5-gal</div>
+        <div class="product-desc">Space-saving slim design</div>
+        <div class="product-price">₱25</div>
+      </div>
+      <div class="product-card" onclick="selectProduct(this,2)">
+        <div class="product-icon">💧</div>
+        <div class="product-name">Round 10-gal</div>
+        <div class="product-desc">Large round container</div>
+        <div class="product-price">₱45</div>
+      </div>
+      <div class="product-card" onclick="selectProduct(this,3)">
+        <div class="product-icon">🪣</div>
+        <div class="product-name">Slim 10-gal</div>
+        <div class="product-desc">Large slim container</div>
+        <div class="product-price">₱45</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-order">
+    <div class="qty-row">
+      <div class="qty-label">Quantity</div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+        <div class="qty-val" id="qtyVal">1</div>
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+    </div>
+    <div class="section-title" style="margin-bottom:8px;">Delivery Type</div>
+    <div class="type-row">
+      <div class="type-chip active" onclick="setType(this,'Delivery')">🚚 Delivery</div>
+      <div class="type-chip" onclick="setType(this,'Pickup')">🏪 Pickup</div>
+    </div>
+    <div class="order-total-row">
+      <div class="total-label">Total Amount</div>
+      <div class="total-val" id="orderTotal">₱25</div>
+    </div>
+    <button class="btn-primary" onclick="openOrderModal()">Place Order 💧</button>
+  </div>
+  <div style="height:90px;"></div>
+  <div class="bottom-nav" id="homeNav">
+    <button class="nav-item active" onclick="switchTab('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-item" onclick="switchTab('orders')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+      My Orders
+    </button>
+    <button class="nav-item" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+</div>
+
+<!-- MY ORDERS -->
+<div class="screen" id="orders">
+  <div class="topbar">
+    <div class="topbar-left"><h2>My Orders</h2></div>
+  </div>
+  <div class="orders-list" id="ordersList">
+    <div class="empty-state">
+      <div class="emoji">📋</div>
+      <h3>No orders yet</h3>
+      <p>Place your first water order from the Home tab!</p>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="switchTab('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-item active" onclick="switchTab('orders')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+      My Orders
+    </button>
+    <button class="nav-item" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="screen" id="profile">
+  <div class="topbar"><div class="topbar-left"><h2>My Profile</h2></div></div>
+  <div class="profile-hero">
+    <div class="avatar">👤</div>
+    <div class="profile-name" id="profileName">Customer</div>
+    <div class="profile-phone" id="profilePhone">No phone set</div>
+  </div>
+  <div class="profile-body">
+    <div class="profile-card">
+      <div class="profile-item" onclick="showToast('📋 Order history coming soon!')">
+        <div class="profile-item-icon">📋</div>
+        <div class="profile-item-label">Order History</div>
+        <div class="profile-item-arrow">›</div>
+      </div>
+      <div class="profile-item" onclick="showToast('💧 Loyalty rewards coming soon!')">
+        <div class="profile-item-icon">⭐</div>
+        <div class="profile-item-label">Loyalty Points</div>
+        <div class="profile-item-arrow">›</div>
+      </div>
+      <div class="profile-item" onclick="showToast('📍 Address book coming soon!')">
+        <div class="profile-item-icon">📍</div>
+        <div class="profile-item-label">Saved Addresses</div>
+        <div class="profile-item-arrow">›</div>
+      </div>
+      <div class="profile-item" onclick="openOwnerLogin()">
+        <div class="profile-item-icon">🔐</div>
+        <div class="profile-item-label">Owner / Staff Login</div>
+        <div class="profile-item-arrow">›</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item" onclick="switchTab('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-item" onclick="switchTab('orders')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+      My Orders
+    </button>
+    <button class="nav-item active" onclick="switchTab('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+</div>
+
+<!-- OWNER DASHBOARD -->
+<div class="screen" id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left"><div><div class="topbar-sub">Owner Panel</div><h2>Dashboard</h2></div></div>
+    <button class="topbar-icon" onclick="logoutOwner()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="dash-grid">
+    <div class="stat-card"><div class="stat-icon" style="background:#DBEAFE;">📦</div><div class="stat-val" id="dashTotal">0</div><div class="stat-label">Total Orders</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5;">💰</div><div class="stat-val" id="dashRevenue">₱0</div><div class="stat-label">Today Revenue</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7;">⏳</div><div class="stat-val" id="dashPending">0</div><div class="stat-label">Pending</div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE;">🚚</div><div class="stat-val" id="dashDelivery">0</div><div class="stat-label">Out for Delivery</div></div>
+  </div>
+  <div class="dash-orders">
+    <div class="section-title" style="margin-bottom:12px;">All Orders</div>
+    <div id="dashOrdersList">
+      <div class="empty-state"><div class="emoji">📭</div><h3>No orders yet</h3><p>Orders from customers will appear here.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDER MODAL -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Confirm Your Order</div>
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input class="form-input" id="custName" placeholder="e.g. Maria Santos" type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone Number</label>
+      <input class="form-input" id="custPhone" placeholder="09XXXXXXXXX" type="tel">
+    </div>
+    <div class="form-group" id="addressGroup">
+      <label class="form-label">Delivery Address</label>
+      <input class="form-input" id="custAddress" placeholder="e.g. Blk 3 Lot 2, Brgy. Caridad" type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <div class="payment-options">
+        <div class="payment-chip active" onclick="setPayment(this,'Cash')">💵 Cash</div>
+        <div class="payment-chip" onclick="setPayment(this,'GCash')">📱 GCash</div>
+        <div class="payment-chip" onclick="setPayment(this,'Maya')">💳 Maya</div>
+      </div>
+    </div>
+    <div style="background:var(--cyan-bg);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem;color:var(--gray);">
+        <span id="summaryItem">Round 5-gal × 1</span>
+        <span id="summaryPrice">₱25</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-weight:800;">
+        <span>Total</span>
+        <span id="summaryTotal" style="color:var(--blue);">₱25</span>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="confirmOrder()">Confirm Order 🎉</button>
+    <button class="btn-secondary" style="margin-top:10px;" onclick="closeModal('orderModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ORDER DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal order-detail-modal">
+    <div class="modal-handle"></div>
+    <div id="detailContent"></div>
+    <button class="btn-secondary" onclick="closeModal('detailModal')">Close</button>
+  </div>
+</div>
+
+<!-- OWNER LOGIN MODAL -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔐 Owner / Staff Login</div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="ownerPass" type="password" placeholder="Enter password">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Login</button>
+    <button class="btn-secondary" style="margin-top:10px;" onclick="closeModal('loginModal')">Cancel</button>
+    <p style="font-size:.75rem;color:var(--gray);text-align:center;margin-top:12px;">Demo password: <strong>aquacul2025</strong></p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const PRODUCTS = [
+  { name:'Round 5-gal', price:25, icon:'🫙' },
+  { name:'Slim 5-gal',  price:25, icon:'🧴' },
+  { name:'Round 10-gal',price:45, icon:'💧' },
+  { name:'Slim 10-gal', price:45, icon:'🪣' },
+];
+const STATUSES = ['Pending','Confirmed','Out for Delivery','Delivered','Cancelled'];
+const STATUS_CLASSES = ['status-pending','status-confirmed','status-delivery','status-delivered','status-cancelled'];
+
+let selectedProduct = 0;
+let qty = 1;
+let deliveryType = 'Delivery';
+let paymentMethod = 'Cash';
+let orders = [];
+let orderCounter = 1;
+let toastTimer;
+
+function goHome() {
+  document.getElementById('splash').classList.remove('active');
+  document.getElementById('home').classList.add('active');
+}
+
+function switchTab(tab) {
+  ['home','orders','profile','dashboard'].forEach(s => {
+    document.getElementById(s).classList.remove('active');
+  });
+  document.getElementById(tab).classList.add('active');
+  if(tab === 'orders') renderOrders();
+  if(tab === 'dashboard') renderDashboard();
+  updateHomeStats();
+}
+
+function selectProduct(el, idx) {
+  document.querySelectorAll('.product-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedProduct = idx;
+  updateTotal();
+}
+
+function changeQty(d) {
+  qty = Math.max(1, Math.min(20, qty + d));
+  document.getElementById('qtyVal').textContent = qty;
+  updateTotal();
+}
+
+function setType(el, type) {
+  document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  deliveryType = type;
+  document.getElementById('addressGroup').style.display = type === 'Delivery' ? 'block' : 'none';
+}
+
+function setPayment(el, method) {
+  document.querySelectorAll('.payment-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  paymentMethod = method;
+}
+
+function updateTotal() {
+  const p = PRODUCTS[selectedProduct];
+  const total = p.price * qty;
+  document.getElementById('orderTotal').textContent = '₱' + total;
+  document.getElementById('summaryItem').textContent = p.name + ' × ' + qty;
+  document.getElementById('summaryPrice').textContent = '₱' + total;
+  document.getElementById('summaryTotal').textContent = '₱' + total;
+}
+
+function openOrderModal() {
+  updateTotal();
+  document.getElementById('addressGroup').style.display = deliveryType === 'Delivery' ? 'block' : 'none';
+  openModal('orderModal');
+}
+
+function confirmOrder() {
+  const name = document.getElementById('custName').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
+  if (!name) { showToast('⚠️ Please enter your name'); return; }
+  if (!phone) { showToast('⚠️ Please enter your phone number'); return; }
+  if (deliveryType === 'Delivery' && !address) { showToast('⚠️ Please enter delivery address'); return; }
+
+  const p = PRODUCTS[selectedProduct];
+  const order = {
+    id: 'AQ' + String(orderCounter++).padStart(4,'0'),
+    product: p.name, icon: p.icon, price: p.price * qty,
+    qty, deliveryType, paymentMethod,
+    name, phone, address: deliveryType === 'Delivery' ? address : 'Pickup',
+    status: 0,
+    time: new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'}),
+    date: new Date().toLocaleDateString('en-PH',{month:'short',day:'numeric'})
+  };
+  orders.unshift(order);
+
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profilePhone').textContent = phone;
+  closeModal('orderModal');
+  updateHomeStats();
+  showToast('🎉 Order placed! ' + order.id);
+  document.getElementById('custName').value='';
+  document.getElementById('custPhone').value='';
+  document.getElementById('custAddress').value='';
+}
+
+function updateHomeStats() {
+  const today = orders.filter(o => o.status !== 4);
+  document.getElementById('todayCount').textContent = today.length;
+  const spent = today.reduce((s,o) => s + o.price, 0);
+  document.getElementById('totalSpent').textContent = '₱' + spent;
+}
+
+function renderOrders() {
+  const el = document.getElementById('ordersList');
+  if (orders.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="emoji">📋</div><h3>No orders yet</h3><p>Place your first water order from the Home tab!</p></div>';
+    return;
+  }
+  el.innerHTML = orders.map(o => `
+    <div class="order-card" onclick="showOrderDetail('${o.id}')">
+      <div class="order-top">
+        <div><div class="order-id">${o.id} · ${o.date} ${o.time}</div>
+        <div class="order-name">${o.icon} ${o.product} × ${o.qty}</div>
+        <div class="order-meta">📍 ${o.address} · ${o.deliveryType}</div></div>
+        <span class="status-badge ${STATUS_CLASSES[o.status]}">${STATUSES[o.status]}</span>
+      </div>
+      <div class="order-bottom">
+        <div class="order-price">₱${o.price}</div>
+        <div class="order-time">${o.paymentMethod}</div>
+      </div>
+    </div>`).join('');
+}
+
+function showOrderDetail(id) {
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  const steps = ['Order Placed','Confirmed','Out for Delivery','Delivered'];
+  const trackHTML = steps.map((s, i) => {
+    const done = i < o.status;
+    const active = i === o.status && o.status < 4;
+    return `<div class="track-step">
+      <div class="track-dot-col">
+        <div class="track-dot ${done?'done':active?'active':''}"></div>
+        ${i < steps.length-1 ? `<div class="track-line ${done?'done':''}"></div>` : ''}
+      </div>
+      <div class="track-info">
+        <div class="track-label">${s}</div>
+        <div class="track-sub">${done||active ? (i===0?o.time:'Completed') : 'Waiting...'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="modal-title">${o.icon} Order ${o.id}</div>
+    <div class="order-track">${trackHTML}</div>
+    <div style="background:var(--cyan-bg);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-weight:800;margin-bottom:6px;">${o.product} × ${o.qty}</div>
+      <div style="font-size:.82rem;color:var(--gray);margin-bottom:3px;">📍 ${o.address}</div>
+      <div style="font-size:.82rem;color:var(--gray);margin-bottom:3px;">💳 ${o.paymentMethod}</div>
+      <div style="font-size:.82rem;color:var(--gray);">👤 ${o.name} · ${o.phone}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:18px;">
+      <span>Total</span><span style="color:var(--blue);font-size:1.2rem;">₱${o.price}</span>
+    </div>`;
+  openModal('detailModal');
+}
+
+function renderDashboard() {
+  const pending = orders.filter(o=>o.status===0).length;
+  const delivery = orders.filter(o=>o.status===2).length;
+  const revenue = orders.filter(o=>o.status!==4).reduce((s,o)=>s+o.price,0);
+  document.getElementById('dashTotal').textContent = orders.length;
+  document.getElementById('dashRevenue').textContent = '₱'+revenue;
+  document.getElementById('dashPending').textContent = pending;
+  document.getElementById('dashDelivery').textContent = delivery;
+
+  const el = document.getElementById('dashOrdersList');
+  if (orders.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="emoji">📭</div><h3>No orders yet</h3><p>Orders from customers will appear here.</p></div>';
+    return;
+  }
+  el.innerHTML = orders.map(o => `
+    <div class="dash-order-item">
+      <div class="dash-order-num">${o.icon}</div>
+      <div class="dash-order-info">
+        <div class="dash-order-name">${o.name} · ₱${o.price}</div>
+        <div class="dash-order-sub">${o.product} × ${o.qty} · ${o.deliveryType} · ${o.paymentMethod}</div>
+      </div>
+      <select class="dash-status-select" onchange="updateStatus('${o.id}',this.value)">
+        ${STATUSES.map((s,i)=>`<option value="${i}" ${o.status===i?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>`).join('');
+}
+
+function updateStatus(id, val) {
+  const o = orders.find(x=>x.id===id);
+  if (o) { o.status = parseInt(val); renderDashboard(); updateHomeStats(); }
+  showToast('✅ Status updated!');
+}
+
+function openOwnerLogin() { openModal('loginModal'); }
+function doLogin() {
+  const pass = document.getElementById('ownerPass').value;
+  if (pass === 'aquacul2025') {
+    closeModal('loginModal');
+    document.getElementById('ownerPass').value = '';
+    ['home','orders','profile'].forEach(s=>document.getElementById(s).classList.remove('active'));
+    document.getElementById('dashboard').classList.add('active');
+    renderDashboard();
+  } else {
+    showToast('❌ Wrong password!');
+  }
+}
+function logoutOwner() {
+  ['dashboard'].forEach(s=>document.getElementById(s).classList.remove('active'));
+  document.getElementById('home').classList.add('active');
+  showToast('👋 Logged out');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  toastTimer = setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>
