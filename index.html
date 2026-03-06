@@ -9,6 +9,44 @@
 <meta name="apple-mobile-web-app-title" content="AquaCul">
 <title>AquaCul – Water Refilling Station</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<script type="module">
+/* AquaCul Firebase Backend */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDLyFz3Ouurx5ZIo3_q0ALTz9ZLdkU-bhI",
+  authDomain: "aquacul.firebaseapp.com",
+  databaseURL: "https://aquacul-default-rtdb.firebaseio.com",
+  projectId: "aquacul",
+  storageBucket: "aquacul.firebasestorage.app",
+  messagingSenderId: "886160505062",
+  appId: "1:886160505062:web:39b5d7f9bcef2f88076327"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const ordersRef = ref(db, 'orders');
+
+// Save order to Firebase
+window.saveOrderToFirebase = function(order) {
+  push(ordersRef, order);
+};
+
+// Listen for all orders in real time
+window.listenToOrders = function(callback) {
+  onValue(ordersRef, (snapshot) => {
+    const data = snapshot.val();
+    const list = data ? Object.entries(data).map(([key, val]) => ({...val, fbKey: key})).reverse() : [];
+    callback(list);
+  });
+};
+
+// Update order status in Firebase
+window.updateOrderInFirebase = function(fbKey, status) {
+  update(ref(db, 'orders/' + fbKey), { status: parseInt(status) });
+};
+</script>
 <style>
   :root {
     --blue: #0A6EBD;
@@ -330,14 +368,8 @@
 
 <!-- SPLASH -->
 <div class="screen active" id="splash">
-  <div class="splash-bubble">
-    <svg viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M34 8 C34 8 12 28 12 42 C12 54 22 62 34 62 C46 62 56 54 56 42 C56 28 34 8 34 8Z" fill="rgba(255,255,255,0.9)"/>
-      <path d="M22 46 C22 46 26 52 34 52 C42 52 46 46 46 46" stroke="rgba(10,110,189,0.5)" stroke-width="2.5" stroke-linecap="round"/>
-    </svg>
-  </div>
-  <h1>AquaCul</h1>
-  <p>Brgy. Caridad Water Refilling Station</p>
+  <img src="aquacul-logo-transparent.png" style="width:220px;filter:drop-shadow(0 4px 24px rgba(0,0,0,0.25));" alt="AquaCul">
+  <p style="color:rgba(255,255,255,0.7);font-size:.9rem;margin-top:-10px;">Brgy. Caridad</p>
   <button class="splash-btn" onclick="goHome()">Get Started 💧</button>
 </div>
 
@@ -345,10 +377,7 @@
 <div class="screen" id="home">
   <div class="topbar">
     <div class="topbar-left">
-      <div>
-        <div class="topbar-sub">Welcome back 👋</div>
-        <h2>AquaCul</h2>
-      </div>
+      <img src="aquacul-logo-transparent.png" style="height:42px;" alt="AquaCul">
     </div>
     <button class="topbar-icon" onclick="showToast('🔔 No new notifications')">
       <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -617,8 +646,17 @@ let qty = 1;
 let deliveryType = 'Delivery';
 let paymentMethod = 'Cash';
 let orders = [];
-let orderCounter = 1;
 let toastTimer;
+
+// Start Firebase real-time listener
+if (window.listenToOrders) {
+  window.listenToOrders((list) => {
+    orders = list;
+    updateHomeStats();
+    renderOrders();
+    renderDashboard();
+  });
+}
 
 function goHome() {
   document.getElementById('splash').classList.remove('active');
@@ -686,7 +724,7 @@ function confirmOrder() {
 
   const p = PRODUCTS[selectedProduct];
   const order = {
-    id: 'AQ' + String(orderCounter++).padStart(4,'0'),
+    id: 'AQ' + Date.now().toString().slice(-6),
     product: p.name, icon: p.icon, price: p.price * qty,
     qty, deliveryType, paymentMethod,
     name, phone, address: deliveryType === 'Delivery' ? address : 'Pickup',
@@ -694,12 +732,17 @@ function confirmOrder() {
     time: new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'}),
     date: new Date().toLocaleDateString('en-PH',{month:'short',day:'numeric'})
   };
-  orders.unshift(order);
+
+  if (window.saveOrderToFirebase) {
+    window.saveOrderToFirebase(order);
+  } else {
+    orders.unshift(order);
+    updateHomeStats();
+  }
 
   document.getElementById('profileName').textContent = name;
   document.getElementById('profilePhone').textContent = phone;
   closeModal('orderModal');
-  updateHomeStats();
   showToast('🎉 Order placed! ' + order.id);
   document.getElementById('custName').value='';
   document.getElementById('custPhone').value='';
@@ -789,15 +832,19 @@ function renderDashboard() {
         <div class="dash-order-name">${o.name} · ₱${o.price}</div>
         <div class="dash-order-sub">${o.product} × ${o.qty} · ${o.deliveryType} · ${o.paymentMethod}</div>
       </div>
-      <select class="dash-status-select" onchange="updateStatus('${o.id}',this.value)">
+      <select class="dash-status-select" onchange="updateStatus('${o.fbKey||o.id}',this.value)">
         ${STATUSES.map((s,i)=>`<option value="${i}" ${o.status===i?'selected':''}>${s}</option>`).join('')}
       </select>
     </div>`).join('');
 }
 
-function updateStatus(id, val) {
-  const o = orders.find(x=>x.id===id);
-  if (o) { o.status = parseInt(val); renderDashboard(); updateHomeStats(); }
+function updateStatus(fbKey, val) {
+  if (window.updateOrderInFirebase) {
+    window.updateOrderInFirebase(fbKey, val);
+  } else {
+    const o = orders.find(x=>x.fbKey===fbKey);
+    if (o) { o.status = parseInt(val); renderDashboard(); updateHomeStats(); }
+  }
   showToast('✅ Status updated!');
 }
 
